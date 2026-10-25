@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Chat - 微机课聊天室</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 登录页 -->
+    <div id="login-page" class="page active">
+        <div class="login-container">
+            <h1>🎓 Class Chat</h1>
+            <p class="subtitle">微机课聊天室</p>
+
+            <!-- 登录表单 -->
+            <div class="login-form" id="login-form">
+                <input type="text" id="login-account" placeholder="账号名 (如: chat01)" autocomplete="off">
+                <input type="password" id="login-password" placeholder="密码" autocomplete="off">
+                <button id="login-btn" onclick="doLogin()">登 录</button>
+                <p id="login-error"></p>
+            </div>
+
+            <!-- 注册表单 -->
+            <div class="login-form hidden" id="register-form">
+                <input type="text" id="reg-username" placeholder="昵称 (如: 小明)" autocomplete="off">
+                <input type="text" id="reg-account" placeholder="账号名 (3-20位)" autocomplete="off">
+                <input type="password" id="reg-password" placeholder="密码 (至少3位)" autocomplete="off">
+                <button onclick="doRegister()">注 册</button>
+                <p id="register-error"></p>
+            </div>
+
+            <div class="quick-login">
+                <a href="javascript:void(0)" onclick="toggleRegister()" id="to-register">没有账号？去注册</a>
+                <a href="javascript:void(0)" onclick="toggleRegister()" id="to-login" class="hidden">返回登录</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 聊天主界面 -->
+    <div id="chat-page" class="page">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>👥 在线用户</h3>
+                <span id="online-count">0</span>
+            </div>
+            <div id="user-list" class="user-list"></div>
+            <div class="sidebar-footer">
+                <div id="current-user-info"></div>
+                <button class="logout-btn" onclick="doLogout()">退出登录</button>
+            </div>
+        </div>
+
+        <!-- 聊天区 -->
+        <div class="chat-area">
+            <div class="chat-header">
+                <h2>💬 微机课聊天室</h2>
+                <div class="header-actions">
+                    <button id="announce-btn" class="admin-btn hidden" onclick="toggleAnnouncePanel()">📢 公告</button>
+                    <button id="admin-btn" class="admin-btn hidden" onclick="toggleAdminPanel()">🛠 管理</button>
+                </div>
+            </div>
+
+            <!-- 公告面板 -->
+            <div id="announce-panel" class="panel hidden">
+                <input type="text" id="announce-input" placeholder="输入公告内容...">
+                <button onclick="sendAnnouncement()">发布</button>
+            </div>
+
+            <!-- 管理面板 -->
+            <div id="admin-panel" class="panel hidden">
+                <div class="admin-row">
+                    <input type="text" id="ban-input" placeholder="账号名">
+                    <button onclick="banAccount()">封禁</button>
+                    <button onclick="unbanAccount()">解封</button>
+                </div>
+                <div class="admin-row">
+                    <button onclick="clearChatHistory()">🗑 清空聊天记录</button>
+                </div>
+            </div>
+
+            <div id="chat-messages" class="chat-messages"></div>
+
+            <!-- 输入区 -->
+            <div id="upload-status" class="upload-status hidden"></div>
+
+            <div class="chat-input-area">
+                <input type="file" id="file-input" hidden onchange="uploadFile()">
+                <button class="attach-btn" onclick="document.getElementById('file-input').click()">📎</button>
+                <input type="text" id="chat-input" placeholder="输入消息... (Enter 发送)" onkeydown="if(event.key==='Enter') sendMessage()">
+                <button id="send-btn" onclick="sendMessage()">发送</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
