@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Class Chat - 微机课聊天室</title>
+    <title>Class Chat V2- 微机课聊天室</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -85,10 +85,12 @@
             <!-- 输入区 -->
             <div id="upload-status" class="upload-status hidden"></div>
 
+            <div id="mention-popup" class="mention-popup hidden"></div>
+
             <div class="chat-input-area">
                 <input type="file" id="file-input" hidden onchange="uploadFile()">
                 <button class="attach-btn" onclick="document.getElementById('file-input').click()">📎</button>
-                <input type="text" id="chat-input" placeholder="输入消息... (Enter 发送)" onkeydown="if(event.key==='Enter') sendMessage()">
+                <input type="text" id="chat-input" placeholder="输入消息... (Enter 发送，输入 @ 提及他人)" onkeydown="handleChatKeydown(event)" oninput="handleChatInput()">
                 <button id="send-btn" onclick="sendMessage()">发送</button>
             </div>
         </div>

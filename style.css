@@ -156,6 +156,7 @@ body {
     margin-bottom: 4px;
     font-size: 14px;
     color: #ccc;
+    cursor: pointer;   /* 点击可直接 @ 该用户 */
 }
 
 .user-item:hover {
@@ -195,6 +196,7 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
+    position: relative;   /* @ 候选框定位基准 */
 }
 
 .chat-header {
@@ -323,6 +325,45 @@ body {
     align-self: center;
     color: #666;
     font-size: 12px;
+}
+
+/* @提及候选框 */
+.mention-popup {
+    position: absolute;
+    bottom: 76px;
+    left: 20px;
+    min-width: 180px;
+    max-height: 200px;
+    overflow-y: auto;
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .35);
+    z-index: 20;
+}
+
+.mention-item {
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #ddd;
+    cursor: pointer;
+}
+
+.mention-item.active,
+.mention-item:hover {
+    background: #e94560;
+    color: #fff;
+}
+
+/* 消息里的 @ 与被@的消息 */
+.mention {
+    color: #e94560;
+    font-weight: 600;
+}
+
+.msg-mention {
+    border-left: 3px solid #e94560;
+    background: #1d2b4d;
 }
 
 /* 上传状态提示 */

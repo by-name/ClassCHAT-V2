@@ -4,6 +4,12 @@ let ws = null;
 let heartbeatTimer = null;
 let reconnectTimer = null;
 
+// ---------- @提及状态 ----------
+let onlineUsers = [];                              // 在线用户，供 @ 自动补全
+let currentUser = { account_name: '', username: '' };
+let mentionCandidates = [];
+let mentionIndex = 0;
+
 // ---------- 配置（与服务端共用 config.json）----------
 const DEFAULT_WS_PORT = 8765;   // 仅当 config.json 读不到时兜底
 let wsConfig = { ws_port: DEFAULT_WS_PORT, ws_path: '' };
@@ -117,12 +123,117 @@ function doRegister() {
 
 // ---------- 聊天功能 ----------
 function sendMessage() {
+    hideMentionPopup();
     const input = document.getElementById('chat-input');
     const text = input.value.trim();
     if (!text) return;
     sendRaw({ type: 'chat', message: text });
     input.value = '';
     input.focus();
+}
+
+// ---------- @提及 ----------
+function getMentionQuery() {
+    const input = document.getElementById('chat-input');
+    const pos = input.selectionStart === null ? input.value.length : input.selectionStart;
+    const text = input.value.slice(0, pos);
+    const m = text.match(/@([^\s@]*)$/);
+    return m ? { start: pos - m[0].length, query: m[1] } : null;
+}
+
+function showMentionPopup() {
+    const popup = document.getElementById('mention-popup');
+    const q = getMentionQuery();
+    if (!popup || !q) {
+        hideMentionPopup();
+        return;
+    }
+
+    const kw = q.query.toLowerCase();
+    mentionCandidates = onlineUsers.filter(u => u.username &&
+        u.username.toLowerCase().includes(kw));
+    if (!mentionCandidates.length) {
+        hideMentionPopup();
+        return;
+    }
+    if (mentionIndex >= mentionCandidates.length) mentionIndex = 0;
+
+    popup.innerHTML = '';
+    mentionCandidates.forEach((u, i) => {
+        const item = document.createElement('div');
+        item.className = 'mention-item' + (i === mentionIndex ? ' active' : '');
+        item.textContent = u.username + (u.account_name ? '（' + u.account_name + '）' : '');
+        item.onmousedown = (e) => {
+            e.preventDefault();          // 防止输入框失焦
+            mentionIndex = i;
+            chooseMention();
+        };
+        popup.appendChild(item);
+    });
+    popup.classList.remove('hidden');
+}
+
+function hideMentionPopup() {
+    const popup = document.getElementById('mention-popup');
+    if (popup) popup.classList.add('hidden');
+    mentionCandidates = [];
+    mentionIndex = 0;
+}
+
+function isMentionPopupVisible() {
+    const popup = document.getElementById('mention-popup');
+    return !!popup && !popup.classList.contains('hidden');
+}
+
+function moveMention(step) {
+    if (!mentionCandidates.length) return;
+    mentionIndex = (mentionIndex + step + mentionCandidates.length) % mentionCandidates.length;
+    showMentionPopup();
+}
+
+function chooseMention() {
+    const item = mentionCandidates[mentionIndex];
+    const q = getMentionQuery();
+    if (!item || !q) return;
+
+    const input = document.getElementById('chat-input');
+    const before = input.value.slice(0, q.start);
+    const after = input.value.slice(q.start + 1 + q.query.length);
+    input.value = before + '@' + item.username + ' ' + after;
+    hideMentionPopup();
+    input.focus();
+}
+
+function handleChatInput() {
+    showMentionPopup();
+}
+
+function handleChatKeydown(event) {
+    if (isMentionPopupVisible()) {
+        if (event.key === 'ArrowDown') { event.preventDefault(); moveMention(1); return; }
+        if (event.key === 'ArrowUp') { event.preventDefault(); moveMention(-1); return; }
+        if (event.key === 'Enter' || event.key === 'Tab') { event.preventDefault(); chooseMention(); return; }
+        if (event.key === 'Escape') { event.preventDefault(); hideMentionPopup(); return; }
+    }
+    if (event.key === 'Enter') sendMessage();
+}
+
+function isMentioned(data) {
+    if (!data.mentions || !data.mentions.length) return false;
+    return data.mentions.some(m =>
+        (currentUser.account_name && m.account_name === currentUser.account_name) ||
+        (currentUser.username && m.username === currentUser.username));
+}
+
+function renderMessageText(text, mentions) {
+    let html = escHtml(text);
+    const names = (mentions || []).map(m => m.username).filter(Boolean);
+    names.sort((a, b) => b.length - a.length);      // 长名优先，避免短名截断
+    names.forEach(name => {
+        const safe = escHtml(name);
+        html = html.split('@' + safe).join('<span class="mention">@' + safe + '</span>');
+    });
+    return html;
 }
 
 function sendAnnouncement() {
@@ -240,6 +351,7 @@ function doLogout() {
 function handleMessage(data) {
     switch (data.type) {
         case 'login_success':
+            currentUser = { account_name: data.account_name, username: data.username };
             sessionStorage.setItem('cc_account', data.account_name);
             sessionStorage.setItem('cc_password', document.getElementById('login-password').value);
 
@@ -307,11 +419,11 @@ function handleMessage(data) {
 function appendChatMsg(data) {
     const container = document.getElementById('chat-messages');
     const div = document.createElement('div');
-    div.className = 'msg-other';
+    div.className = 'msg-other' + (isMentioned(data) ? ' msg-mention' : '');
     div.innerHTML = `
         <span class="msg-user">${escHtml(data.username)}</span>
         <span class="msg-time">${data.time}</span>
-        <div>${escHtml(data.message)}</div>
+        <div>${renderMessageText(data.message, data.mentions)}</div>
     `;
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
@@ -328,14 +440,26 @@ function appendSystemMsg(text) {
 
 function updateUserList(users) {
     const list = document.getElementById('user-list');
-    document.getElementById('online-count').textContent = users.length;
+    onlineUsers = users || [];
+    document.getElementById('online-count').textContent = onlineUsers.length;
     list.innerHTML = '';
-    users.forEach(u => {
+    onlineUsers.forEach(u => {
         const div = document.createElement('div');
         div.className = 'user-item';
         div.textContent = u.username || u.account_name;
+        div.onclick = () => insertMention(u.username || u.account_name);
         list.appendChild(div);
     });
+}
+
+// 点击在线用户直接 @ 他
+function insertMention(name) {
+    const input = document.getElementById('chat-input');
+    if (!name) return;
+    const value = input.value;
+    const needSpace = value.length > 0 && !/\s$/.test(value);
+    input.value = value + (needSpace ? ' ' : '') + '@' + name + ' ';
+    input.focus();
 }
 
 function escHtml(text) {

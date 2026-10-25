@@ -85,6 +85,42 @@ def get_online_users():
         for info in CLIENTS.values()
     ]
 
+# ========== @提及 ==========
+MENTION_RE = re.compile(r"@([^\s@，。,\.!！？?；;]{1,32})")
+
+def find_mention_names(content):
+    """提取消息里 @ 后面的名字（去重、保持出现顺序）。"""
+    names, seen = [], set()
+    for match in MENTION_RE.finditer(content or ""):
+        name = match.group(1)
+        if name not in seen:
+            seen.add(name)
+            names.append(name)
+    return names
+
+
+def resolve_mentions(names):
+    """把 @ 后的名字解析成在线用户（昵称或账号名均可，忽略大小写）。"""
+    if not names:
+        return []
+
+    online = {}
+    for info in CLIENTS.values():
+        online.setdefault(info["username"].lower(), info)
+        online.setdefault(info["account_name"].lower(), info)
+
+    result, seen = [], set()
+    for name in names:
+        info = online.get(name.lower())
+        if info and info["account_name"] not in seen:
+            seen.add(info["account_name"])
+            result.append({
+                "username": info["username"],
+                "account_name": info["account_name"],
+            })
+    return result
+
+
 # ========== 上传校验 ==========
 def get_file_ext(filename):
     return os.path.splitext(str(filename or ""))[1].lstrip(".").lower()
@@ -270,6 +306,7 @@ async def handle_message(ws, raw_data):
             "account_name": user_info["account_name"],
             "username": user_info["username"],
             "message": content,
+            "mentions": resolve_mentions(find_mention_names(content)),
             "time": datetime.now().strftime("%H:%M:%S")
         }
 
@@ -478,7 +515,7 @@ async def main():
     async with websockets.serve(chat_handler, HOST, PORT):
         print(f"""
 ╔══════════════════════════════════════╗
-║     Class-Chat WebSocket Server      ║
+║     Class-Chat V2 WebSocket Server      ║
 ║     Listening on ws://{HOST}:{PORT}        ║
 ║     Press Ctrl+C to stop             ║
 ╚══════════════════════════════════════╝
