@@ -9,6 +9,7 @@ echo   Class-Chat V2 Startup
 echo ============================================
 echo.
 
+[INFO] Class-CHAT版本: V2
 REM ========== Python ==========
 set "PYTHON="
 if exist "python\python.exe" set "PYTHON=python\python.exe"
