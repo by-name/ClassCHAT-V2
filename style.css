@@ -327,10 +327,102 @@ body {
     font-size: 12px;
 }
 
+/* 引用回复 */
+.quote-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 20px;
+    padding: 8px 12px;
+    background: #0f3460;
+    border-left: 3px solid #e94560;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #ccc;
+}
+
+.quote-bar-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.quote-bar-close {
+    background: transparent;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 4px;
+}
+
+.quote-bar-close:hover {
+    color: #fff;
+}
+
+.quote-btn {
+    margin-left: 8px;
+    padding: 0 4px;
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 12px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .2s;
+}
+
+.msg-other:hover .quote-btn {
+    opacity: 1;
+}
+
+.quote-btn:hover {
+    color: #e94560;
+}
+
+.msg-quote {
+    margin: 4px 0 6px;
+    padding: 4px 8px;
+    border-left: 2px solid #4a6fa5;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, .18);
+    font-size: 12px;
+    color: #9aa5b1;
+    cursor: pointer;
+    word-break: break-word;
+}
+
+.msg-quote:hover {
+    background: rgba(0, 0, 0, .3);
+}
+
+.quote-user {
+    color: #7bd389;
+}
+
+.quote-time {
+    margin-left: 6px;
+    opacity: .6;
+}
+
+.quote-text {
+    margin-top: 2px;
+}
+
+.msg-flash {
+    animation: msg-flash 1.2s ease;
+}
+
+@keyframes msg-flash {
+    0%, 100% { background: #16213e; }
+    50%      { background: #2a3f6b; }
+}
+
 /* @提及候选框 */
 .mention-popup {
     position: absolute;
-    bottom: 76px;
+    bottom: 118px;      /* 抬到引用条上方，避免遮挡 */
     left: 20px;
     min-width: 180px;
     max-height: 200px;

@@ -10,6 +10,9 @@ let currentUser = { account_name: '', username: '' };
 let mentionCandidates = [];
 let mentionIndex = 0;
 
+// ---------- 引用回复状态 ----------
+let pendingQuote = null;                           // 待发送的引用 {id, username, message}
+
 // ---------- 配置（与服务端共用 config.json）----------
 const DEFAULT_WS_PORT = 8765;   // 仅当 config.json 读不到时兜底
 let wsConfig = { ws_port: DEFAULT_WS_PORT, ws_path: '' };
@@ -127,9 +130,59 @@ function sendMessage() {
     const input = document.getElementById('chat-input');
     const text = input.value.trim();
     if (!text) return;
-    sendRaw({ type: 'chat', message: text });
+
+    const payload = { type: 'chat', message: text };
+    if (pendingQuote && pendingQuote.id) payload.quote_id = pendingQuote.id;   // 只发 id，内容由服务端回填
+    sendRaw(payload);
+
     input.value = '';
+    setPendingQuote(null);
     input.focus();
+}
+
+// ---------- 引用回复 ----------
+function truncate(text, max = 60) {
+    const s = String(text || '');
+    return s.length > max ? s.slice(0, max) + '…' : s;
+}
+
+function setPendingQuote(quote) {
+    pendingQuote = quote || null;
+    const bar = document.getElementById('quote-bar');
+    if (!bar) return;
+
+    if (!pendingQuote) {
+        bar.classList.add('hidden');
+        bar.innerHTML = '';
+        return;
+    }
+
+    bar.innerHTML = '';
+    const label = document.createElement('span');
+    label.className = 'quote-bar-text';
+    label.textContent = `引用 ${pendingQuote.username || '某人'}：${truncate(pendingQuote.message, 40)}`;
+
+    const close = document.createElement('button');
+    close.className = 'quote-bar-close';
+    close.type = 'button';
+    close.textContent = '✕';
+    close.title = '取消引用';
+    close.onclick = () => setPendingQuote(null);
+
+    bar.appendChild(label);
+    bar.appendChild(close);
+    bar.classList.remove('hidden');
+    const input = document.getElementById('chat-input');
+    if (input) input.focus();
+}
+
+function scrollToMessage(id) {
+    if (!id) return;
+    const target = document.querySelector('[data-msg-id="' + String(id).replace(/[^\w-]/g, '') + '"]');
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.classList.add('msg-flash');
+    setTimeout(() => target.classList.remove('msg-flash'), 1200);
 }
 
 // ---------- @提及 ----------
@@ -420,13 +473,43 @@ function appendChatMsg(data) {
     const container = document.getElementById('chat-messages');
     const div = document.createElement('div');
     div.className = 'msg-other' + (isMentioned(data) ? ' msg-mention' : '');
+    if (data.id) div.dataset.msgId = data.id;
+
     div.innerHTML = `
         <span class="msg-user">${escHtml(data.username)}</span>
-        <span class="msg-time">${data.time}</span>
+        <span class="msg-time">${escHtml(data.time || '')}</span>
+        <button class="quote-btn" type="button" title="引用这条消息">↩</button>
+        ${renderQuoteBlock(data.quote)}
         <div>${renderMessageText(data.message, data.mentions)}</div>
     `;
+
+    const quoteBtn = div.querySelector('.quote-btn');
+    if (quoteBtn) {
+        quoteBtn.onclick = () => setPendingQuote({
+            id: data.id,
+            username: data.username,
+            message: data.message
+        });
+    }
+
+    const quoteBlock = div.querySelector('.msg-quote');
+    if (quoteBlock) {
+        quoteBlock.onclick = () => scrollToMessage(quoteBlock.dataset.quoteId);
+    }
+
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
+}
+
+function renderQuoteBlock(quote) {
+    if (!quote) return '';
+    return `
+        <div class="msg-quote" data-quote-id="${escHtml(quote.id || '')}">
+            <span class="quote-user">${escHtml(quote.username || '未知用户')}</span>
+            <span class="quote-time">${escHtml(quote.time || '')}</span>
+            <div class="quote-text">${escHtml(quote.message || '')}</div>
+        </div>
+    `;
 }
 
 function appendSystemMsg(text) {

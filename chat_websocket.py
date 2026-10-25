@@ -5,6 +5,7 @@ import json
 import os
 import re
 import sys
+import uuid
 import base64
 from datetime import datetime
 
@@ -84,6 +85,31 @@ def get_online_users():
         }
         for info in CLIENTS.values()
     ]
+
+# ========== 引用回复 ==========
+QUOTE_PREVIEW_LEN = 60          # 引用块里原文摘要的最大长度
+
+def build_quote(quote_id):
+    """按 quote_id 在聊天历史里查原消息，生成引用块。
+
+    只认服务端自己生成的 id，引用内容一律取自历史记录，不接受客户端伪造的文本。
+    查不到（已被清空/超出 500 条上限）时返回 None，该条消息就不带引用。
+    """
+    if not isinstance(quote_id, str) or not quote_id:
+        return None
+
+    for msg in CHAT_HISTORY:
+        if msg.get("type") == "chat" and msg.get("id") == quote_id:
+            text = msg.get("message", "")
+            preview = text if len(text) <= QUOTE_PREVIEW_LEN else text[:QUOTE_PREVIEW_LEN] + "…"
+            return {
+                "id": msg.get("id"),
+                "username": msg.get("username", ""),
+                "message": preview,
+                "time": msg.get("time", ""),
+            }
+    return None
+
 
 # ========== @提及 ==========
 MENTION_RE = re.compile(r"@([^\s@，。,\.!！？?；;]{1,32})")
@@ -303,12 +329,17 @@ async def handle_message(ws, raw_data):
 
         msg_obj = {
             "type": "chat",
+            "id": uuid.uuid4().hex[:12],
             "account_name": user_info["account_name"],
             "username": user_info["username"],
             "message": content,
             "mentions": resolve_mentions(find_mention_names(content)),
             "time": datetime.now().strftime("%H:%M:%S")
         }
+
+        quote = build_quote(data.get("quote_id"))
+        if quote:
+            msg_obj["quote"] = quote
 
         CHAT_HISTORY.append(msg_obj)
         if len(CHAT_HISTORY) > MAX_HISTORY:
