@@ -9,7 +9,7 @@ echo   Class-Chat V2 Startup
 echo ============================================
 echo.
 
-[INFO] Class-CHAT版本: V2
+echo [INFO] Class-CHAT版本: V2
 REM ========== Python ==========
 set "PYTHON="
 if exist "python\python.exe" set "PYTHON=python\python.exe"
@@ -36,6 +36,13 @@ if not exist "file" mkdir file
 REM ========== 初始化账号数据库（首次运行会自动迁移 Account.json）==========
 "%PYTHON%" account_db.py
 if errorlevel 1 (echo [ERROR] 账号数据库初始化失败 & pause & exit /b 1)
+
+REM ========== 显示管理员账号密码 ==========
+if exist "show_admin.py" (
+    "%PYTHON%" show_admin.py
+) else (
+    echo [WARN] 未找到 show_admin.py，跳过管理员密码显示
+)
 
 REM ========== 读取 config.json（前后端共用端口）==========
 set "WS_PORT=8765"

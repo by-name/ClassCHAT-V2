@@ -14,6 +14,7 @@ import json
 import os
 import secrets
 import sqlite3
+import sys
 from contextlib import closing
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -262,7 +263,34 @@ def set_ban(account_name, banned):
         return cur.rowcount > 0
 
 
+def set_password(account_name, new_password):
+    """重设密码（存为哈希）。返回 bool：True 表示账号存在且已更新。"""
+    if not new_password:
+        return False
+    with closing(get_conn()) as conn:
+        cur = conn.execute(
+            "UPDATE accounts SET password = ? WHERE account_name = ?",
+            (hash_password(new_password), account_name),
+        )
+        conn.commit()
+        return cur.rowcount > 0
+
+
 if __name__ == "__main__":
     n = init_db()
+
+    # 命令行：python account_db.py set-password <账号名> <新密码>
+    if len(sys.argv) >= 4 and sys.argv[1] == "set-password":
+        target, new_pwd = sys.argv[2], sys.argv[3]
+        if not account_exists(target):
+            print(f"[ERROR] 账号不存在: {target}")
+            sys.exit(1)
+        if set_password(target, new_pwd):
+            print(f"[DB] 已重设账号 {target} 的密码为: {new_pwd}")
+        else:
+            print(f"[ERROR] 重设失败: {target}")
+            sys.exit(1)
+        sys.exit(0)
+
     print(f"[DB] 数据库文件: {DB_FILE}")
     print(f"[DB] 迁移账号数: {n}，当前账号总数: {count_accounts()}")
