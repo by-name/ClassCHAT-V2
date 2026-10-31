@@ -1,0 +1,25 @@
+# ===== Python =====
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+python/
+
+# ===== 数据库 =====
+*.db
+
+# ===== 配置（通常含敏感信息）=====
+config.json
+
+# ===== 证书 =====
+certs/
+
+# ===== Nginx 运行时 =====
+nginx/
+nginx/
+# ===== 系统文件 =====
+.DS_Store
+Thumbs.db
+
+# ===== 快捷方式 / 临时文件 =====
+*.bat
